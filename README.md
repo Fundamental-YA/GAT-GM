@@ -17,13 +17,14 @@
 - 构建环境使用<a href="https://anaconda.org/">anaconda</a>，点击前往官网下载，可以参考<a href="https://blog.csdn.net/JineD/article/details/129507719">这篇教程</a>
 <br>
 使用environment文件下载，按照自己是否有NVIDIA显卡选择cpu/cuda
+
 ```
 $ conda env create -f environment-cpu.txt
-```
+```  
 ```
 $ conda env create -f environment-cuda.txt
-```
-之后请检查numpy的版本，确保在1.x（建议1.26.4）
+```  
+之后请检查numpy的版本，确保在1.x（建议1.26.4）  
 
 将FPGNN项目包放在与gatgm包的同级文件  
 FPGNN的下载地址https://github.com/idrugLab/FP-GNN  
