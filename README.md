@@ -16,13 +16,13 @@
 - 本研究基于Ubuntu系统，强烈建议使用Ubuntu系统运行
 - 构建环境使用<a href="https://anaconda.org/">anaconda</a>，点击前往官网下载，可以参考<a href="https://blog.csdn.net/JineD/article/details/129507719">这篇教程</a>
 <br>
-使用environment文件下载，按照自己是否有NVIDIA显卡选择cpu/cuda
+使用environment文件下载，按照自己是否有NVIDIA显卡选择cpu/gpu，若使用GPU，请注意CUDA版本>=11.7
 
 ```
 $ conda env create -f environment-cpu.txt
 ```  
 ```
-$ conda env create -f environment-cuda.txt
+$ conda env create -f environment-gpu.txt
 ```  
 之后请检查numpy的版本，确保在1.x（建议1.26.4）  
 
@@ -199,7 +199,7 @@ $\mathbf{e}_{ij}^{3D} \in \mathbb{R}^{20}$ 包含距离分箱、氢键潜力、�
 
 ## 特征融合与预测头
 
-设 $\lambda = $ `--gat_scale`，融合方式为：
+设 $\lambda=$  `--gat_scale`，融合方式为：
 
 $$
 \mathbf{h}_{\text{fusion}} =
