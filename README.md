@@ -158,7 +158,7 @@ FPGNN的下载地址https://github.com/idrugLab/FP-GNN
 ### e.g.
 训练
 ```
-$ python train.py --data_path data/bace.csv --dataset_type regression --metric prc-auc --use_3d_features --gat_scale 0.5 --hidden_size 300 --fp_2_dim 600 --dropout 0.2 --batch_size 1024 --epochs 200 --seed 42 --save_path model_save/bace --patience 30
+$ python train.py --data_path data/bace.csv --dataset_type regression --use_3d_features --gat_scale 0.5 --hidden_size 300 --fp_2_dim 600 --dropout 0.2 --batch_size 1024 --epochs 200 --seed 42 --save_path model_save/bace --patience 30
 ```
 
 预测
