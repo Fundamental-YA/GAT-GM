@@ -16,7 +16,7 @@
 - 本研究基于Ubuntu系统，强烈建议使用Ubuntu系统运行
 - 构建环境使用<a href="https://anaconda.org/">anaconda</a>，点击前往官网下载，可以参考<a href="https://blog.csdn.net/JineD/article/details/129507719">这篇教程</a>
 <br>
-使用environment文件下载，按照自己是否有NVIDIA显卡选择cpu/gpu，若使用GPU，请注意CUDA版本>=11.7
+使用environment文件搭建环境，按照自己是否有NVIDIA显卡选择cpu/gpu，I卡和A卡请使用CPU版本。若使用GPU（N卡），请注意CUDA版本>=11.7
 
 ```
 $ conda env create -f environment-cpu.txt
