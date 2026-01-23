@@ -27,12 +27,12 @@ class MoleData:
             try:
                 self.mol = Chem.AddHs(self.mol)
                 
-                # --- 尝试 1: 默认的 K-M 算法 (EmbedMolecule) ---
+                # 尝试 1: 默认的 K-M 算法 (EmbedMolecule) ---
                 if AllChem.EmbedMolecule(self.mol, randomSeed=42) == 0:
                     AllChem.MMFFOptimizeMolecule(self.mol)
                     self._extract_3d_features()
                 else:
-                    # --- 尝试 2: 失败后，使用更稳健的 AllChem.GenerateDepiction (2D) 或更激进的 EmbedGenerator ---
+                    # 尝试 2: 失败后，使用更稳健的 AllChem.GenerateDepiction (2D) 或更激进的 EmbedGenerator ---
                     print(f"警告: EmbedMolecule失败，尝试回退策略... SMILES: {self.smile}")
                     
                     # 尝试用更激进的参数再次生成构象
@@ -55,7 +55,9 @@ class MoleData:
                 self.edge_feat = None
 
     def _extract_3d_features(self):
-        """提取3D特征：完整20维边特征"""
+        '''
+        提取3D特征：完整20维边特征
+        '''
         try:
             conf = self.mol.GetConformer()
             n = self.mol.GetNumAtoms()
@@ -285,13 +287,12 @@ class MoleDataSet(Dataset):
                 # 即使 GATEncoder 后面会进行切片匹配，这里也应使用 MolData 原始的重原子数
                 # 
                 # 注意：MoleData.mol 已经被 RemoveHs 了，所以 GetNumAtoms() 得到的是 N_heavy
-                # 但由于您的 edge_feat 是在 AddHs 后生成的，这里的逻辑有点混乱。
                 # 
                 # 最安全的方法是：如果 edge_feat 为 None，我们知道 3D 生成失败了。
                 # GATEncoder 期望的输入大小是 (N_heavy, N_heavy, 20)。
                 
-                # 让我们假设 edge_feat 成功时是 (N_full, N_full, 20)
-                # 而失败时，我们必须提供 GATEncoder 可以切片（或不切片）的尺寸。
+                # 假设 edge_feat 成功时是 (N_full, N_full, 20)
+                # 而失败时，必须提供 GATEncoder 可以切片（或不切片）的尺寸。
                 # 考虑到 GATEncoder 最终是基于重原子数 `atom_size` 进行切片的。
                 
                 # 解决冲突：直接创建 GATEncoder 最终期望的尺寸 (N_heavy, N_heavy, 20)
@@ -320,4 +321,5 @@ class MoleDataSet(Dataset):
     def change_label(self, label):
         assert len(self.data) == len(label)
         for i in range(len(label)):
+
             self.data[i].change_label(label[i])
