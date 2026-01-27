@@ -19,8 +19,8 @@ def epoch_train(model, data, loss_f, optimizer, scheduler, args):
     data_used = 0
     
     # num_workers > 0 启用多进程数据加载，释放主进程/GPU等待时间
-    # 注意：您的 MoleDataSet 已经实现了 __len__ 和 __getitem__，所以可以直接用
-    # DataLoader会自动调用您的 __getitem__ 方法
+    # MoleDataSet 已经实现了 __len__ 和 __getitem__，所以可以直接用
+    # DataLoader会自动调用 __getitem__ 方法
     train_loader = DataLoader(dataset=data, 
                               batch_size=args.batch_size, 
                               shuffle=False, # 已经在 data.random_data() 中处理
@@ -34,7 +34,6 @@ def epoch_train(model, data, loss_f, optimizer, scheduler, args):
         mask = torch.Tensor([[x is not None for x in tb] for tb in label])
         target = torch.Tensor([[0 if x is None else x for x in tb] for tb in label])
         
-        # ... (后续代码保持不变，注意处理 iter_step 的逻辑不再需要)
         if next(model.parameters()).is_cuda:
             mask, target = mask.cuda(), target.cuda()
         
@@ -48,7 +47,7 @@ def epoch_train(model, data, loss_f, optimizer, scheduler, args):
         if hasattr(args, 'use_3d_features') and args.use_3d_features:
             # edge_feats 是一个列表，列表中的每个元素是 (N,N,20) 的 Tensor
             edge_feats = data_now.get_edge_feats() 
-            # 您的模型在 batch size > 1 时需要一个列表，batch size == 1 时需要 [tensor]
+            # batch size > 1 时需要一个列表，batch size == 1 时需要 [tensor]
             pred = model(smile, edge_feat=edge_feats)
         else:
             pred = model(smile)
