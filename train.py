@@ -8,6 +8,7 @@ from gatgm.tool import set_log, set_train_argument, get_task_name, mkdir
 
 def training(args, log):
     info = log.info
+    info(f'Start training. Dataset: {args.data_path}')
 
     first_seed = args.seed  # 第一个种子值
     data_path = args.data_path  # 数据路径
@@ -52,3 +53,4 @@ if __name__ == '__main__':
     args = set_train_argument()
     log = set_log('train', args.log_path)
     training(args, log)
+
