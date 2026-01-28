@@ -185,7 +185,7 @@ def fold_train(args, log):
     for epoch in range(args.epochs):
         info(f'Epoch {epoch}')
         
-        epoch_train(model, train_data, loss_f, optimizer, scheduler, args)
+        train_loss = epoch_train(model, train_data, loss_f, optimizer, scheduler, args)
         
         train_pred = predict(model, train_data, args.batch_size, label_scaler)
         train_label = train_data.label()
@@ -193,6 +193,8 @@ def fold_train(args, log):
         val_pred = predict(model, val_data, args.batch_size, label_scaler)
         val_label = val_data.label()
         val_score = compute_score(val_pred, val_label, metric_f, args, log)
+
+        info(f'Train loss = {train_loss:.6f}')
         
         ave_train_score = np.nanmean(train_score)
         print()
@@ -239,4 +241,5 @@ def fold_train(args, log):
         for one_name, one_score in zip(args.task_names, test_score):
             info(f'Task {one_name} {args.metric} = {one_score:.6f}')
     
+
     return test_score
