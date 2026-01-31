@@ -128,16 +128,16 @@ def compute_score(pred, label, metric_f, args, log):
 def fold_train(args, log):
     info = log.info
     debug = log.debug
-    
+
     debug('Start loading data')
-    
+
     args.task_names = get_task_name(args.data_path)
     data = load_data(args.data_path, args)
     args.task_num = data.task_num()
     data_type = args.dataset_type
     if args.task_num > 1:
         args.is_multitask = 1
-    
+
     debug(f'Splitting dataset with Seed = {args.seed}.')
     if args.val_path:
         val_data = load_data(args.val_path, args)
@@ -154,22 +154,143 @@ def fold_train(args, log):
     else:
         train_data, val_data, test_data = split_data(data, args.split_type, args.split_ratio, args.seed, log)
     debug(f'Dataset size: {len(data)}    Train size: {len(train_data)}    Val size: {len(val_data)}    Test size: {len(test_data)}')
-    
+
     if data_type == 'regression':
         label_scaler = get_label_scaler(train_data)
     else:
         label_scaler = None
     args.train_data_size = len(train_data)
-    
+
     loss_f = get_loss(data_type)
     metric_f = get_metric(args.metric)
-    
+
+    original_task_names = list(args.task_names)
+    original_task_num = args.task_num
+
+    if getattr(args, 'train_each_label', False) and args.task_num > 1:
+        import copy
+        all_test_scores = []
+
+        # 一个辅助函数：从 MoleDataSet 构造仅保留 idx-th 标签的单任务子集
+        def make_single_label_dataset(dataset, idx):
+            new_list = []
+            for one in dataset.data:
+                one_cp = copy.deepcopy(one)
+                # 保证为单任务形式（长度为1 的 list），缺失值 None
+                one_cp.label = [one.label[idx] if one.label is not None and len(one.label) > idx else None]
+                new_list.append(one_cp)
+            return MoleDataSet(new_list)
+
+        info(f'Training each label separately: {original_task_names}')
+        for i, one_name in enumerate(original_task_names):
+            info(f'---- Start training label {i}: {one_name} ----')
+            # 1) 构造单任务数据集
+            train_data_i = make_single_label_dataset(train_data, i)
+            val_data_i = make_single_label_dataset(val_data, i)
+            test_data_i = make_single_label_dataset(test_data, i)
+
+            # 2) 临时修改 args，使模型与训练流程认为这是单任务
+            args.task_num = 1
+            args.task_names = [one_name]
+            args.is_multitask = 0
+
+            # 3) (回归) 为该子训练集计算 scaler
+            if data_type == 'regression':
+                label_scaler_i = get_label_scaler(train_data_i)
+            else:
+                label_scaler_i = None
+
+            # 4) 初始化模型/优化器/调度器等（与原实现一致）
+            debug('Training Model')
+            model = FPGNN(args)
+            debug(model)
+            if args.cuda:
+                model = model.to(torch.device("cuda"))
+
+            optimizer = Adam(params=model.parameters(), lr=args.init_lr, weight_decay=0)
+            scheduler = NoamLR(optimizer=optimizer, warmup_epochs=[args.warmup_epochs], total_epochs=[args.epochs] * args.num_lrs,
+                               steps_per_epoch=args.train_data_size // args.batch_size, init_lr=[args.init_lr], max_lr=[args.max_lr],
+                               final_lr=[args.final_lr])
+            if data_type == 'classification':
+                best_score = -float('inf')
+            else:
+                best_score = float('inf')
+            best_epoch = 0
+            no_improvement_count = 0
+
+            # 5) 训练循环（直接借用之前的逻辑，注意修改 save_model 的保存名）
+            for epoch in range(args.epochs):
+                info(f'Epoch {epoch} (label {one_name})')
+
+                # 需要把 epoch_train/predict 的 data 参数替换为 train_data_i / val_data_i
+                train_loss = epoch_train(model, train_data_i, loss_f, optimizer, scheduler, args)
+
+                train_pred = predict(model, train_data_i, args.batch_size, label_scaler_i)
+                train_label = train_data_i.label()
+                train_score = compute_score(train_pred, train_label, metric_f, log, args=args) if False else compute_score(train_pred, train_label, metric_f, args, log)
+                # note: compute_score signature not changed; 保持调用一致
+
+                val_pred = predict(model, val_data_i, args.batch_size, label_scaler_i)
+                val_label = val_data_i.label()
+                val_score = compute_score(val_pred, val_label, metric_f, args, log)
+
+                info(f'Train loss = {train_loss:.6f}')
+
+                ave_train_score = np.nanmean(train_score)
+                print()
+                info(f'Train {args.metric} = {ave_train_score:.6f}')
+
+                ave_val_score = np.nanmean(val_score)
+                info(f'Validation {args.metric} = {ave_val_score:.6f}')
+
+                improved = False
+                if data_type == 'classification' and ave_val_score > best_score:
+                    improved = True
+                elif data_type == 'regression' and ave_val_score < best_score:
+                    improved = True
+
+                if improved:
+                    best_score = ave_val_score
+                    best_epoch = epoch
+                    no_improvement_count = 0
+                    # 保存模型到 <label>.pt
+                    save_model(os.path.join(args.save_path, f'{one_name}.pt'), model, label_scaler_i, args)
+                else:
+                    no_improvement_count += 1
+                    info(f'No improvement for {no_improvement_count}/{args.patience} epochs.')
+
+                if no_improvement_count >= args.patience:
+                    info(f'Early stopping at epoch {epoch} for label {one_name}.')
+                    break
+
+            info(f'Best validation {args.metric} = {best_score:.6f} on epoch {best_epoch} for label {one_name}')
+
+            # 6) 加载该标签最优模型并在对应测试集上评估
+            model = load_model(os.path.join(args.save_path, f'{one_name}.pt'), args.cuda, log)
+            test_pred = predict(model, test_data_i, args.batch_size, label_scaler_i)
+            test_label = test_data_i.label()
+            test_score = compute_score(test_pred, test_label, metric_f, args, log)
+            # test_score 是长度1 的列表（单任务），取第0 个即可
+            score_value = test_score[0] if len(test_score) > 0 else float('nan')
+            info(f'Seed {args.seed} : test {args.metric} (label {one_name}) = {score_value:.6f}')
+            all_test_scores.append(score_value)
+
+        # 恢复 args 的原始 task 信息
+        args.task_num = original_task_num
+        args.task_names = original_task_names
+        if args.task_num > 1:
+            args.is_multitask = 1
+
+        # 返回与原来相同格式的任务分数列表
+        return all_test_scores
+
     debug('Training Model')
     model = FPGNN(args)
     debug(model)
     if args.cuda:
         model = model.to(torch.device("cuda"))
     save_model(os.path.join(args.save_path, 'model.pt'), model, label_scaler, args)
+
     optimizer = Adam(params=model.parameters(), lr=args.init_lr, weight_decay=0)
     scheduler = NoamLR(optimizer=optimizer, warmup_epochs=[args.warmup_epochs], total_epochs=[args.epochs] * args.num_lrs,
                        steps_per_epoch=args.train_data_size // args.batch_size, init_lr=[args.init_lr], max_lr=[args.max_lr],
@@ -181,31 +302,32 @@ def fold_train(args, log):
     best_epoch = 0
 
     no_improvement_count = 0
-    
+
     for epoch in range(args.epochs):
         info(f'Epoch {epoch}')
-        
+
         train_loss = epoch_train(model, train_data, loss_f, optimizer, scheduler, args)
-        
+
         train_pred = predict(model, train_data, args.batch_size, label_scaler)
         train_label = train_data.label()
         train_score = compute_score(train_pred, train_label, metric_f, args, log)
+
         val_pred = predict(model, val_data, args.batch_size, label_scaler)
         val_label = val_data.label()
         val_score = compute_score(val_pred, val_label, metric_f, args, log)
 
         info(f'Train loss = {train_loss:.6f}')
-        
+
         ave_train_score = np.nanmean(train_score)
         print()
         info(f'Train {args.metric} = {ave_train_score:.6f}')
-        
+
         ave_val_score = np.nanmean(val_score)
         info(f'Validation {args.metric} = {ave_val_score:.6f}')
         if args.task_num > 1:
             for one_name, one_score in zip(args.task_names, val_score):
                 info(f'Validation {one_name} {args.metric} = {one_score:.6f}')
-        
+
         improved = False
         if data_type == 'classification' and ave_val_score > best_score:
             improved = True
@@ -215,7 +337,7 @@ def fold_train(args, log):
         if improved:
             best_score = ave_val_score
             best_epoch = epoch
-            no_improvement_count = 0 # 重置计数器
+            no_improvement_count = 0
             save_model(os.path.join(args.save_path, 'model.pt'), model, label_scaler, args)
         else:
             no_improvement_count += 1
@@ -223,23 +345,20 @@ def fold_train(args, log):
 
         if no_improvement_count >= args.patience:
             info(f'Early stopping at epoch {epoch} as validation {args.metric} did not improve for {args.patience} consecutive epochs.')
-            break # 退出训练循环
-    
+            break
+
     info(f'Best validation {args.metric} = {best_score:.6f} on epoch {best_epoch}')
-    
+
     model = load_model(os.path.join(args.save_path, 'model.pt'), args.cuda, log)
-    test_smile = test_data.smile()
-    test_label = test_data.label()
-    
     test_pred = predict(model, test_data, args.batch_size, label_scaler)
+    test_label = test_data.label()
     test_score = compute_score(test_pred, test_label, metric_f, args, log)
-    
+
     ave_test_score = np.nanmean(test_score)
     info(f'Seed {args.seed} : test {args.metric} = {ave_test_score:.6f}')
-    
+
     if args.task_num > 1:
         for one_name, one_score in zip(args.task_names, test_score):
             info(f'Task {one_name} {args.metric} = {one_score:.6f}')
-    
 
     return test_score
