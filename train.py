@@ -27,7 +27,7 @@ def training(args, log):
         scores.append(fold_score)
 
     scores = np.array(scores)
-
+    info(f'Dataset: {args.data_path}')
     info(f'Running {args.num_folds} folds in total.')  # 打印总共运行的折数
     if args.num_folds > 1:
         for fold_num, fold_score in enumerate(scores):
@@ -53,4 +53,5 @@ if __name__ == '__main__':
     args = set_train_argument()
     log = set_log('train', args.log_path)
     training(args, log)
+
 
