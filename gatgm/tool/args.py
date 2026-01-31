@@ -61,6 +61,9 @@ def add_train_argument(p):
     p.add_argument('--hidden_size', type=int, default=256,
                    help='Hidden size used across GAT/FPN/FFN.')
 
+    p.add_argument('--train_each_label', action='store_true',
+                   help='If set, train each label separately (single-task per label) instead of joint multi-task training.')
+
 
 
 def add_predict_argument(p):
@@ -201,4 +204,5 @@ def set_intergraph_argument():
     
     mkdir(args.figure_path, isdir = True)
     
+
     return args
