@@ -10,6 +10,7 @@
 [![Mixed FP](https://img.shields.io/badge/Fingerprint-Mixed%201489dim-ff9900)](#)
 [![Tasks](https://img.shields.io/badge/Tasks-Classification%20%26%20Regression-blueviolet)](#)
 [![Split](https://img.shields.io/badge/Split-Random%20%7C%20Scaffold-00bcd4)](#)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ---
 # 使用 (Usage)
 ## 1.环境部署：
@@ -67,6 +68,7 @@ FPGNN的下载地址https://github.com/idrugLab/FP-GNN
 | `--log_path`           | str                                 | `log`            | 日志文件保存目录                                                      |
 | `--dataset_type`       | `classification` / `regression`     | 无（必填）        | 数据集任务类型：分类或回归                                             |
 | `--is_multitask`       | int (0/1)                           | 0                | 是否为多任务学习，0=单任务，1=多任务                                    |
+|`--train_each_label`    |标志（无需值）                        |False             | 开启对多标签任务进行拆分训练（每个标签独立训练一个模型），否则联合训练     |
 | `--task_num`           | int                                 | 1                | 多任务学习中的任务数量                                                 |
 | `--seed`               | int                                 | 0                | 随机种子（用于数据划分和模型初始化）                                    |
 
@@ -78,7 +80,7 @@ FPGNN的下载地址https://github.com/idrugLab/FP-GNN
 | `--split_ratio`        | float（三个数）                      | `[0.8, 0.1, 0.1]`      | 训练/验证/测试集划分比例，例如 0.8 0.1 0.1                            |
 | `--val_path`           | str                                 | None                   | 额外的验证集 CSV 文件路径（可选）                                      |
 | `--test_path`          | str                                 | None                   | 额外的测试集 CSV 文件路径（可选）                                      |
-| `--num_folds`          | int                                 | 1                      | 交叉验证的折数（>1 时启用k折交叉验证）                                  |
+| `--num_folds`          | int                                 | 1                      | 交叉验证的折数（>1 时启用叉验证）<b>多次独立随机试验，不是k折</b>        |
 
 ### 训练超参数
 
@@ -158,16 +160,19 @@ FPGNN的下载地址https://github.com/idrugLab/FP-GNN
 ### e.g.
 训练
 ```
-$ python train.py --data_path data/bace.csv --dataset_type regression --use_3d_features --gat_scale 0.5 --hidden_size 300 --fp_2_dim 600 --dropout 0.2 --batch_size 1024 --epochs 200 --seed 42 --save_path model_save/bace --patience 30
+$ python train.py --data_path data/clintox.csv --dataset_type regression --task_num 2 --train_each_label --use_3d_features --gat_scale 0.5 --hidden_size 300 --fp_2_dim 600 --dropout 0.2 --batch_size 1024 --epochs 200 --patience 10 --seed 0 --num_fold 43 --save_path model_save/clintox
 ```
+训练集data/clintox.csv，2标签，分开训练，使用3D，融合比1:1，1024一批，200轮，10轮无提升早停，种子从0尝试到42，保存到model_save/clintox/Seed <seed>/<label>.pt
+
 
 预测
 ```
-$ python predict.py --predict_path your_dataset.csv --mo
-del_path model_save/bace/Seed_42/model.pt --result_path result/your_result.csv --batch_size 512
+$ python predict.py --predict_path your_dataset.csv --model_path model_save/bace/Seed_42/model.pt --result_path result/your_result.csv --batch_size 512
 ```
+预测your_dataset.csv，模型model_save/bace/Seed_42/model.pt，保存到result/your_result.csv，一批512
 
-**--bach_size**根据显存调整，**--dataset_type**根据任务类型（分类/回归）调整，**--seed**随机种子不同可能有不同的效果
+
+**--bach_size**根据显存调整，**--dataset_type**根据任务类型（分类/回归）调整。**--seed**随机种子不同可能有不同的效果，控制台输出也可以在日志里找到，默认在log/debug.log
 
 <br>
 
@@ -237,6 +242,6 @@ $ sudo apt install htop
 ```
 $ watch -n 1 nvidia-smi
 ```
-5.所有模型都不是万能的，该模型在某些数据集的训练效果极佳：bbbp seed=42 Average test auc = 0.940869 +/- 0.000000  
+5.所有模型都不是万能的，该模型在某些数据集的训练效果较好：bbbp seed=42 Average test auc = 0.940869  
 但部分数据集表现较差，部分情况下切换种子会更有效，否则建议使用其他模型。
 <br><br>&emsp;
