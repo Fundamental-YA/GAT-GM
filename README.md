@@ -15,22 +15,37 @@
 # 使用 (Usage)
 ## 1.环境部署：
 - 本研究基于Ubuntu系统，强烈建议使用Ubuntu系统运行
-- 构建环境使用<a href="https://anaconda.org/">anaconda</a>，点击前往官网下载，可以参考<a href="https://blog.csdn.net/JineD/article/details/129507719">这篇教程</a>
+- 构建conda环境使用<a href="https://anaconda.org/">anaconda</a>，点击前往官网下载，可以参考<a href="https://blog.csdn.net/JineD/article/details/129507719">这篇教程</a>
+- 建议使用VSCode，以免产生不必要的麻烦
 <br>
 使用environment文件搭建环境，按照自己是否有NVIDIA显卡选择cpu/gpu，I卡和A卡请使用CPU版本。若使用GPU（N卡），请注意CUDA版本>=11.7
 
 ```
-$ conda env create -f environment-cpu.txt
+$ conda env create -f environment-cpu.yaml
 ```  
 ```
-$ conda env create -f environment-gpu.txt
+$ conda env create -f environment-gpu.yaml
 ```  
 之后请检查numpy的版本，确保在1.x（建议1.26.4）  
-
 将FPGNN项目包放在与gatgm包的同级文件  
 FPGNN的下载地址https://github.com/idrugLab/FP-GNN  
+<br>
 
-文件结构：  
+**排错：**
+
+- 报错：is excluded by strict repo priority
+```
+$ conda config --set channel_priority flexible
+```
+
+- 如果因网络等问题安装中断，请使用update指令如：
+```
+$ conda env update -f environment-gpu.yaml
+```
+- 中国大陆地区部分包的安装需要科学上网
+<br>
+
+**文件结构：**  
 ```
 ├── data  *训练用数据集
 ├── fpgnn  
@@ -68,7 +83,7 @@ FPGNN的下载地址https://github.com/idrugLab/FP-GNN
 | `--log_path`           | str                                 | `log`            | 日志文件保存目录                                                      |
 | `--dataset_type`       | `classification` / `regression`     | 无（必填）        | 数据集任务类型：分类或回归                                             |
 | `--is_multitask`       | int (0/1)                           | 0                | 是否为多任务学习，0=单任务，1=多任务                                    |
-|`--train_each_label`    |标志（无需值）                        |False             | 开启对多标签任务进行拆分训练（每个标签独立训练一个模型），否则联合训练     |
+|`--train_each_label`    |标志（无需值）                         |False             | 开启对多标签任务进行拆分训练（每个标签独立训练一个模型），否则联合训练        |
 | `--task_num`           | int                                 | 1                | 多任务学习中的任务数量                                                 |
 | `--seed`               | int                                 | 0                | 随机种子（用于数据划分和模型初始化）                                    |
 
