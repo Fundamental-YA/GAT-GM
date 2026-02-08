@@ -27,12 +27,12 @@ class MoleData:
             try:
                 self.mol = Chem.AddHs(self.mol)
                 
-                # 尝试 1: 默认的 K-M 算法 (EmbedMolecule) ---
+                # 尝试 1: 默认的 K-M 算法 (EmbedMolecule)
                 if AllChem.EmbedMolecule(self.mol, randomSeed=42) == 0:
                     AllChem.MMFFOptimizeMolecule(self.mol)
                     self._extract_3d_features()
                 else:
-                    # 尝试 2: 失败后，使用更稳健的 AllChem.GenerateDepiction (2D) 或更激进的 EmbedGenerator ---
+                    # 尝试 2: 失败后，使用更稳健的 AllChem.GenerateDepiction (2D) 或更激进的 EmbedGenerator
                     print(f"警告: EmbedMolecule失败，尝试回退策略... SMILES: {self.smile}")
                     
                     # 尝试用更激进的参数再次生成构象
@@ -323,3 +323,4 @@ class MoleDataSet(Dataset):
         for i in range(len(label)):
 
             self.data[i].change_label(label[i])
+
