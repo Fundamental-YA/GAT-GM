@@ -18,14 +18,34 @@
 - 构建conda环境使用<a href="https://anaconda.org/">anaconda</a>，点击前往官网下载，可以参考<a href="https://blog.csdn.net/JineD/article/details/129507719">这篇教程</a>
 - 建议使用VSCode，以免产生不必要的麻烦
 <br>
-使用environment文件搭建环境，按照自己是否有NVIDIA显卡选择cpu/gpu，I卡和A卡请使用CPU版本。若使用GPU（N卡），请注意CUDA版本>=11.7
+使用environment文件搭建环境，按照自己是否有NVIDIA显卡选择cpu/gpu，I卡和A卡请使用CPU版本。
+
+- 查看显卡驱动支持的CUDA（不是已安装CUDA的版本）：
 
 ```
-$ conda env create -f environment-cpu.yaml
-```  
+nvidia-smi
 ```
-$ conda env create -f environment-gpu.yaml
-```  
+
+- 驱动支持CUDA<12.0：
+```
+conda env create -f environment-gpu-117.yaml
+```
+
+- 驱动支持CUDA>=12.0：
+```
+conda env create -f environment-gpu-128.yaml
+```
+
+- CPU：
+```
+conda env create -f environment-cpu.yaml
+```
+
+- 激活环境：
+```
+conda activate miku
+```
+
 之后请检查numpy的版本，确保在1.x（建议1.26.4）  
 将FPGNN项目包放在与gatgm包的同级文件  
 FPGNN的下载地址https://github.com/idrugLab/FP-GNN  
@@ -35,12 +55,12 @@ FPGNN的下载地址https://github.com/idrugLab/FP-GNN
 
 - 报错：is excluded by strict repo priority
 ```
-$ conda config --set channel_priority flexible
+conda config --set channel_priority flexible
 ```
 
 - 如果因网络等问题安装中断，请使用update指令如：
 ```
-$ conda env update -f environment-gpu.yaml
+conda env update -f environment-gpu-128.yaml
 ```
 - 中国大陆地区部分包的安装需要科学上网
 <br>
@@ -175,14 +195,14 @@ $ conda env update -f environment-gpu.yaml
 ### e.g.
 训练
 ```
-$ python train.py --data_path data/clintox.csv --dataset_type regression --task_num 2 --train_each_label --use_3d_features --gat_scale 0.5 --hidden_size 300 --fp_2_dim 600 --dropout 0.2 --batch_size 1024 --epochs 200 --patience 10 --seed 0 --num_fold 43 --save_path model_save/clintox
+python train.py --data_path data/clintox.csv --dataset_type classification --task_num 2 --train_each_label --use_3d_features --gat_scale 0.5 --hidden_size 300 --fp_2_dim 600 --dropout 0.2 --batch_size 1024 --epochs 200 --patience 10 --seed 0 --num_fold 43 --save_path model_save/clintox
 ```
 训练集data/clintox.csv，2标签，分开训练，使用3D，融合比1:1，1024一批，200轮，10轮无提升早停，种子从0尝试到42，保存到model_save/clintox/Seed <seed>/<label>.pt
 
 
 预测
 ```
-$ python predict.py --predict_path your_dataset.csv --model_path model_save/bace/Seed_42/model.pt --result_path result/your_result.csv --batch_size 512
+python predict.py --predict_path your_dataset.csv --model_path model_save/bace/Seed_42/model.pt --result_path result/your_result.csv --batch_size 512
 ```
 预测your_dataset.csv，模型model_save/bace/Seed_42/model.pt，保存到result/your_result.csv，一批512
 
@@ -251,11 +271,11 @@ $$\text{FFN}:\ \mathbb{R}^{512}\to\mathbb{R}^{256}\to\mathbb{R}^{\text{task-num}
 3.该模型通常情况下回归任务比分类任务收敛的更快，但效果没有分类任务好  
 4.建议在运行过程中使用Htop工具监视CPU状态，下载：
 ```
-$ sudo apt install htop
+sudo apt install htop
 ```
 同时监视显卡状态：
 ```
-$ watch -n 1 nvidia-smi
+watch -n 1 nvidia-smi
 ```
 5.所有模型都不是万能的，该模型在某些数据集的训练效果较好：bbbp seed=42 Average test auc = 0.940869  
 但部分数据集表现较差，部分情况下切换种子会更有效，否则建议使用其他模型。
