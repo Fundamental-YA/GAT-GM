@@ -184,14 +184,14 @@ class GATEncoder(nn.Module):
             edge_feat_i = None 
             
             # 初始化 edge_feat_tensor 以避免 UnboundLocalError
-            edge_feat_tensor = None # <--- 修复: 提前初始化
+            edge_feat_tensor = None
 
             if edge_feat is not None:
                 # edge_feat 应该是一个列表/元组，其中包含批次中所有分子的边特征
                 if isinstance(edge_feat, (list, tuple)) and i < len(edge_feat):
                     edge_feat_tensor = edge_feat[i]
                 
-                # 2. **核心修改：将 edge_feat_tensor 移动到正确的设备**
+                # 2. 将 edge_feat_tensor 移动到正确的设备
                 if edge_feat_tensor is not None: # 使用初始化后的变量
                     # 将 edge_feat_tensor 移动到与模型相同的设备
                     edge_feat_tensor = edge_feat_tensor.to(device) 
@@ -394,4 +394,5 @@ def FPGNN(args):
         else:
             nn.init.xavier_normal_(param)
     
+
     return model
