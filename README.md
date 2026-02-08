@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)](#)
 [![PyTorch](https://img.shields.io/badge/PyTorch-1.13.0-EE4C2C?logo=pytorch&logoColor=white)](#)
 [![CUDA](https://img.shields.io/badge/CUDA-11.7-success?logo=nvidia&logoColor=white)](#)
+[![CUDA](https://img.shields.io/badge/CUDA-12.x-success?logo=nvidia&logoColor=white)](#)
 [![RDKit](https://img.shields.io/badge/RDKit-2024.03.6-00CC00?logo=rdkit&logoColor=white)](#)
 [![Model](https://img.shields.io/badge/Model-FPGNN%20%2B%203D--GAT-ff69b4)](#)
 [![3D Edge Features](https://img.shields.io/badge/3D%20Edge%20Features-20dim-brightgreen)](#)
